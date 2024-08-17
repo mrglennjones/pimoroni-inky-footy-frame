@@ -27,7 +27,7 @@ you could adjust the code and store them on the pico if required. (should fit) :
 these scripts utilise data fetched from https://www.api-football.com/
 create an account here https://dashboard.api-football.com/register
 
-1. copy and paste your API KEY to a file called API_KEY.py and save it to the root of the pico, with the contents:-
+1. copy and paste your API KEY to a file called [API KEY FILE](API_KEY.py) and save it to the root of the pico, with the contents:-
 
 ```
 API_KEY = 'your api key here'
