@@ -38,7 +38,7 @@ SSID = "your wifi ssid"
 PASSWORD = "your wifi password"
 COUNTRY = "GB"  # Change to your local two-letter ISO 3166-1 country code
 ```
-3. copy all of the crest png files to the root of the sd card (or pico if you've adjusted the code)
+3. copy all of the crest png files from [crest png images](footy_frame_crests.zip) to the root (not in a folder) of the sd card (or pico if you've adjusted the code)
 
 4. run league_standings.py - this displays a full premier league table along with form data and team crest pngs
 5. or run match_fixtures.py - this displays 3 days of premier league fixtures along with, live scores and match details
