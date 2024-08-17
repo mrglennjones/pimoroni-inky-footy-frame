@@ -3,7 +3,7 @@ premier league league table and fixtures lists with live scores and match detail
 
 (this is in a very alpha stage atm, but i wanted to share it on the information super highway for others to utilise and play with.
 
-give me a follow on all the socials @mrglennjones. let me know if you like/hate it or just send send me some classic footy hooligan style banter or abuse, whatever.
+give me a follow on all the socials @mrglennjones. let me know if you like/hate it or just send me some classic footy hooligan style banter or abuse, whatever.
 
 ![image](https://github.com/user-attachments/assets/9ef435da-9ec8-4ad1-b0a5-c6c2f4ba852a)
 ![image](https://github.com/user-attachments/assets/04c89abf-9905-4ba1-87b0-c86cf1205b86)
