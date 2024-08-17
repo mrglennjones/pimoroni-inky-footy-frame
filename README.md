@@ -17,7 +17,7 @@ https://shop.pimoroni.com/products/inky-frame-7-3?variant=40541882056787
 
 - https://www.api-football.com/ account (this makes saeveral calls to the this api, theres 100 calls per day available on the free tier, so be careful with overuse (check the their dashboard for current usage totals)
 
-## recomended:-
+## recommended:-
 - Micro SD card for team crest png image storage (default)
 you could adjust the code and store them on the pico if required. (should fit) :)
 
