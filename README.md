@@ -1,6 +1,14 @@
 # pimoroni-inky-footy-frame
 premier league league table and fixtures lists with live scores and match details, disaplying on Pimoroni's e-ink colour display, The Inky Frame 7.3
 
+(this is in a very alpha stage atm, but i wanted to share it on the informaation super highway for others to utilise and play with.
+
+give me a follow on all the socials @mrglennjones.
+
+![image](https://github.com/user-attachments/assets/9ef435da-9ec8-4ad1-b0a5-c6c2f4ba852a)
+![image](https://github.com/user-attachments/assets/04c89abf-9905-4ba1-87b0-c86cf1205b86)
+
+
 ## required:-
 - Pimoroni Inky Frame 7.3 (smaller ones will need extension code adjustment for resizing this to a smaller e-ink display)
 https://shop.pimoroni.com/products/inky-frame-7-3?variant=40541882056787
