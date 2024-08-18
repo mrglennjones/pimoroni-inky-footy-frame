@@ -246,9 +246,11 @@ async def fetch_and_display_fixtures(positions):
                         superscript_x = team_name_x + display.measure_text(home_team[:17], scale=2) + 3  # Offset for superscript
                         display.text(league_position, superscript_x, y_position - 3, scale=1)  # Smaller scale and adjusted y
 
-                    # Display the score or "vs" if the match hasn't started
+                    # Display the score centered under "Score" header
                     score_display = f"{home_score} - {away_score}" if status != 'NS' else "vs"
-                    display.text(score_display, 290, y_position, scale=2)  # Move Score left by 5 pixels
+                    score_width = display.measure_text(score_display, scale=2)
+                    score_x = 290 + (display.measure_text("Score", scale=1) - score_width) // 2  # Center score under "Score" header
+                    display.text(score_display, score_x, y_position, scale=2)
 
                     # Load and draw the away team crest with adjusted y-position
                     away_crest_filename = f"/sd/{away_team_id}.png"
