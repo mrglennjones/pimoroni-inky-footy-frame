@@ -42,7 +42,12 @@ COUNTRY = "GB"  # Change to your local two-letter ISO 3166-1 country code
 
 4. run league_standings.py - this displays a full premier league table along with form data and team crest pngs
 5. or run match_fixtures.py - this displays 3 days of premier league fixtures along with, live scores and match details
+6. a battery indicator can be added to the top right of the inky frame:-
+```
+import battery_smol
 
+battery_smol.display_battery(display)  # Call the function to display the battery information
+```
 
 
 ### ill put todo stuff in the issues section, feel free to get involved and collaberate on this.
