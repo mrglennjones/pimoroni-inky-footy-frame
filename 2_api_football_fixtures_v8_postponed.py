@@ -405,7 +405,7 @@ async def fetch_and_display_fixtures(positions):
                 display.text(line, detail_x_offset, y_position - vertical_offset + (i * 10), scale=1)
 
             # Adjust y_position for the next fixture, considering the number of wrapped lines
-            y_position += base_line_height + (total_lines - 1) * 2
+            y_position += base_line_height + (total_lines - 2) * 2
 
         y_position += 5  # Extra space after finishing a day's fixtures
 
