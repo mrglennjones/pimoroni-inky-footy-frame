@@ -152,7 +152,7 @@ async def fetch_fixture_events(fixture_id):
                 details.append(f"Goal: {scorer} ({event['time']['elapsed']}')")
             elif event['type'] == 'Card':
                 card_type = 'Yellow' if event['detail'] == 'Yellow Card' else 'Red'
-                details.append(f"{event['player']['name']} {card_type} ({event['time']['elapsed']}')")
+                details.append(f"{card_type}: {event['player']['name']} ({event['time']['elapsed']}')")
     else:
         print("Failed to fetch events:", response.status_code)
     response.close()
