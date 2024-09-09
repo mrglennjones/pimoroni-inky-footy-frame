@@ -44,7 +44,7 @@ battery_smol.display_battery(display)  # Call the function to display the batter
 display.set_font("bitmap8")
 
 # Define league ID globally (Premier League ID: 39)
-LEAGUE_ID = 1023  # Premier League ID
+LEAGUE_ID = 39  # Premier League ID
 
 # Automatically get the current year for the season
 SEASON = time.localtime()[0]  # Use the current year from the system
@@ -69,23 +69,32 @@ def is_bst(date_tuple):
     current_ts = time.mktime(date_tuple)
     return start_bst_ts <= current_ts < end_bst_ts
 
-# Async function to connect to Wi-Fi
-async def connect_wifi(timeout=30):
+# Async function to connect to Wi-Fi with retry mechanism
+async def connect_wifi(timeout=30, retry_delay=5, max_retries=3):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect(SSID, PASSWORD)
-    start_time = time.time()
+    retries = 0
     
-    gc.collect()  # Clean up memory before starting the connection process
+    while retries < max_retries:
+        print(f"Attempting to connect to Wi-Fi (Attempt {retries + 1}/{max_retries})")
+        wlan.connect(SSID, PASSWORD)
+        start_time = time.time()
+
+        while not wlan.isconnected():
+            if time.time() - start_time > timeout:
+                print(f"Failed to connect to Wi-Fi on attempt {retries + 1}. Retrying in {retry_delay} seconds...")
+                retries += 1
+                await asyncio.sleep(retry_delay)
+                break
+            await asyncio.sleep(1)
+
+        if wlan.isconnected():
+            print("Connected to Wi-Fi")
+            return True
     
-    while not wlan.isconnected():
-        if time.time() - start_time > timeout:
-            print("Failed to connect to Wi-Fi within timeout.")
-            return False
-        await asyncio.sleep(1)
-    
-    print("Connected to Wi-Fi")
-    return True
+    print("Exceeded maximum retry attempts. Exiting.")
+    return False
+
 
 # Async function to fetch the current league standings
 async def fetch_standings():
@@ -95,18 +104,38 @@ async def fetch_standings():
     
     try:
         response = urequests.get(url, headers=headers)
+        
+        # Debugging: Print the status code and the response
+        print(f"Status Code: {response.status_code}")
+        
         if response.status_code == 200:
             data = response.json()
-            standings = data['response'][0]['league']['standings'][0]
-            positions = {team['team']['id']: team['rank'] for team in standings}
+            
+            # Debugging: Print the raw data received from the API
+            print("Received data:", data)
+            
+            # Ensure the response has the expected structure
+            if 'response' in data and len(data['response']) > 0:
+                league_data = data['response'][0]
+                if 'league' in league_data and 'standings' in league_data['league'] and len(league_data['league']['standings']) > 0:
+                    standings = league_data['league']['standings'][0]
+                    positions = {team['team']['id']: team['rank'] for team in standings}
+                else:
+                    print("Unexpected data structure or no standings available.")
+                    positions = {}
+            else:
+                print("No data found in the response.")
+                positions = {}
         else:
-            print("Failed to fetch standings:", response.status_code)
+            print(f"Failed to fetch standings: {response.status_code}")
             positions = {}
     finally:
         response.close()
         gc.collect()  # Free memory after handling the response
     
     return positions
+
+
 
 # Async function to fetch fixture events like goals and cards
 async def fetch_fixture_events(fixture_id):
@@ -123,12 +152,12 @@ async def fetch_fixture_events(fixture_id):
                 details.append(f"Goal: {scorer} ({event['time']['elapsed']}')")
             elif event['type'] == 'Card':
                 card_type = 'Yellow' if event['detail'] == 'Yellow Card' else 'Red'
-                card_color = YELLOW if card_type == 'Yellow' else RED
                 details.append(f"{event['player']['name']} {card_type} ({event['time']['elapsed']}')")
     else:
         print("Failed to fetch events:", response.status_code)
     response.close()
     return details
+
 
 # Function to wrap text based on a maximum character count per line
 def wrap_text(text, max_length):
@@ -165,45 +194,107 @@ def load_and_display_crest(team_id, x, y):
         display.set_pen(BLACK)
         display.rectangle(x, y, 20, 20)
 
-# Function to fetch fixtures for today and upcoming days until a total of 10 is reached
-async def fetch_and_display_fixtures(positions):
-    gc.collect()  # Free memory before fetching fixtures
-    y_position = 10  # Starting y-position for the first day's fixtures
-    base_line_height = 40  # Base space between rows to fit more fixtures
-
-    total_fixtures_to_display = 10
-    displayed_fixtures = []  # To store all fixtures
+# Function to fetch fixtures for today
+async def fetch_today_fixtures():
     today_date = "{:04d}-{:02d}-{:02d}".format(*time.localtime()[:3])  # Get today's date
-    matchday_offset = 0  # Start from today and move forward if needed
+    url = f'https://v3.football.api-sports.io/fixtures?league={LEAGUE_ID}&season={SEASON}&date={today_date}'
+    headers = {'x-apisports-key': API_KEY}
 
-    while len(displayed_fixtures) < total_fixtures_to_display:
-        # Fetch fixtures for the current matchday
-        url = f'https://v3.football.api-sports.io/fixtures?league={LEAGUE_ID}&season={SEASON}&date={today_date}'
-        headers = {'x-apisports-key': API_KEY}
+    gc.collect()  # Clean up memory before making the request
+    try:
         response = urequests.get(url, headers=headers)
+
+        # Debugging: Print status and response
+        print(f"Fetching fixtures for: {today_date}")
+        print(f"Status Code: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
-            fixtures = data['response']
             
-            # Append today's matches
-            for fixture in fixtures:
-                displayed_fixtures.append(fixture)
-                if len(displayed_fixtures) >= total_fixtures_to_display:
-                    break
-
+            # Debugging: Print the raw data received
+            print("Received data:", data)
+            
+            # Check if the response has fixtures
+            if 'response' in data and len(data['response']) > 0:
+                fixtures = data['response']
+                return fixtures
+            else:
+                print(f"No fixtures found for {today_date}.")
+                return []
         else:
-            print(f"Failed to fetch fixtures for {today_date}: {response.status_code}")
-            break
+            print(f"Failed to fetch today's fixtures: {response.status_code}")
+            return []
+    finally:
+        response.close()
+        gc.collect()  # Run garbage collection to free up memory after the request
 
-        # If fewer than 10 fixtures were found, increment the matchday_offset for the next day
-        matchday_offset += 1
-        today_date = "{:04d}-{:02d}-{:02d}".format(*time.localtime(time.time() + (matchday_offset * 86400))[:3])
 
-    # Sort fixtures by their timestamp to ensure correct time order
+
+# Function to fetch the next 10 upcoming fixtures
+async def fetch_next_10_fixtures():
+    url = f'https://v3.football.api-sports.io/fixtures?league={LEAGUE_ID}&season={SEASON}&next=10'
+    headers = {'x-apisports-key': API_KEY}
+    
+    gc.collect()  # Clean up memory before making the request
+    try:
+        response = urequests.get(url, headers=headers)
+
+        # Debugging: Print status and response
+        print(f"Fetching the next 10 fixtures")
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Debugging: Print the raw data received
+            print("Received data:", data)
+            
+            # Check if the response has fixtures
+            if 'response' in data and len(data['response']) > 0:
+                fixtures = data['response']
+                return fixtures
+            else:
+                print("No upcoming fixtures found.")
+                return []
+        else:
+            print(f"Failed to fetch the next 10 fixtures: {response.status_code}")
+            return []
+    finally:
+        response.close()
+        gc.collect()  # Run garbage collection after the request
+
+
+# Function to get the day name from a date (YYYY-MM-DD format)
+def get_day_name(date_str):
+    year, month, day = map(int, date_str.split('-'))
+    date_tuple = (year, month, day, 0, 0, 0, 0, 0)
+    timestamp = time.mktime(date_tuple)
+    weekday_num = time.localtime(timestamp)[6]
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    return day_names[weekday_num]
+
+# Function to fetch and display fixtures (both today and the next 10)
+async def fetch_and_display_fixtures(positions):
+    gc.collect()  # Free memory before fetching fixtures
+    y_position = 10  # Starting y-position for the first fixture display
+    base_line_height = 40  # Base space between rows to fit more fixtures
+
+    # Fetch today's fixtures
+    today_fixtures = await fetch_today_fixtures()
+
+    # If fewer than 10 fixtures today, fetch the next 10
+    next_fixtures = []
+    if len(today_fixtures) < 10:
+        next_fixtures = await fetch_next_10_fixtures()
+
+    # Combine today's fixtures and the next 10 fixtures, making sure we don't exceed 10
+    displayed_fixtures = today_fixtures + next_fixtures
+    displayed_fixtures = displayed_fixtures[:10]  # Limit to 10 fixtures
+
+    # Sort fixtures by timestamp to ensure proper time order
     displayed_fixtures = sorted(displayed_fixtures, key=lambda fixture: fixture['fixture']['timestamp'])
 
-    # Now display the fixtures
+    # Display the fixtures
     if len(displayed_fixtures) == 0:
         display.set_pen(RED)
         display.text("No fixtures found.", 10, y_position, scale=2)
@@ -214,20 +305,9 @@ async def fetch_and_display_fixtures(positions):
             fixture_time_utc = fixture['fixture']['date'][11:16]  # Time of the fixture (HH:MM) in UTC
             fixture_date = fixture['fixture']['date'][:10]  # Extract the YYYY-MM-DD part of the date
 
-            print(f"Displaying fixture: {fixture_id}, Time: {fixture_time_utc}")
-
             # Convert fixture date to DD-MM-YYYY format
             date_parts = fixture_date.split('-')
             fixture_date_formatted = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"
-
-            # Function to get the day name from a date (YYYY-MM-DD format)
-            def get_day_name(date_str):
-                year, month, day = map(int, date_str.split('-'))
-                date_tuple = (year, month, day, 0, 0, 0, 0, 0)
-                timestamp = time.mktime(date_tuple)
-                weekday_num = time.localtime(timestamp)[6]
-                day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-                return day_names[weekday_num]
 
             # Display the day name and date header if the fixture's date is different from the current one
             if fixture_date != current_date:
@@ -243,7 +323,6 @@ async def fetch_and_display_fixtures(positions):
 
             # Convert UTC time to local time
             fixture_time_local = convert_utc_to_local(fixture_time_utc)
-            print(f"Fixture local time: {fixture_time_local}")
 
             home_team = fixture['teams']['home']['name']
             away_team = fixture['teams']['away']['name']
@@ -269,6 +348,12 @@ async def fetch_and_display_fixtures(positions):
             else:  # Other statuses (e.g., postponed or canceled)
                 score_display = "P-P"
                 pen_color = RED
+
+            # Fetch match events only if the status is 'FT' or 'LIVE' (or other applicable statuses)
+            if status in ['FT', 'LIVE', '1H', '2H', 'HT']:
+                details = await fetch_fixture_events(fixture_id)
+            else:
+                details = []  # No events to display if the match hasn't started
 
             print(f"Score display: {score_display}")
 
@@ -306,8 +391,7 @@ async def fetch_and_display_fixtures(positions):
                 display.set_pen(RED)
                 display.text(league_position, superscript_x_away, y_position - 3, scale=1)
 
-            # Fetch and display match details like goal scorers and cards
-            details = await fetch_fixture_events(fixture_id)
+            # Fetch and display match details like goal scorers and cards only for played or live matches
             detail_x_offset = 515  # X-position for details
             wrapped_lines = wrap_text("; ".join(details), 63)
 
@@ -321,10 +405,11 @@ async def fetch_and_display_fixtures(positions):
                 display.text(line, detail_x_offset, y_position - vertical_offset + (i * 10), scale=1)
 
             # Adjust y_position for the next fixture, considering the number of wrapped lines
-            y_position += base_line_height + (total_lines - 1) * 8
+            y_position += base_line_height + (total_lines - 1) * 2
 
         y_position += 5  # Extra space after finishing a day's fixtures
 
+        
 
 # Main function to run all tasks
 async def main():
