@@ -44,7 +44,7 @@ battery_smol.display_battery(display)  # Call the function to display the batter
 display.set_font("bitmap8")
 
 # Define league ID globally (Premier League ID: 39)
-LEAGUE_ID = 39  # Premier League ID
+LEAGUE_ID = 291  # Premier League ID
 
 # Automatically get the current year for the season
 SEASON = time.localtime()[0]  # Use the current year from the system
@@ -287,9 +287,17 @@ async def fetch_and_display_fixtures(positions):
     if len(today_fixtures) < 10:
         next_fixtures = await fetch_next_10_fixtures()
 
-    # Combine today's fixtures and the next 10 fixtures, making sure we don't exceed 10
-    displayed_fixtures = today_fixtures + next_fixtures
-    displayed_fixtures = displayed_fixtures[:10]  # Limit to 10 fixtures
+    # Use a set to keep track of already added fixture IDs to avoid duplicates
+    fixture_ids = set(fixture['fixture']['id'] for fixture in today_fixtures)
+    
+    # Add only new fixtures from the next_fixtures
+    for fixture in next_fixtures:
+        if fixture['fixture']['id'] not in fixture_ids:
+            today_fixtures.append(fixture)
+            fixture_ids.add(fixture['fixture']['id'])
+
+    # Combine today's fixtures and next fixtures, limit to 10 fixtures
+    displayed_fixtures = today_fixtures[:10]
 
     # Sort fixtures by timestamp to ensure proper time order
     displayed_fixtures = sorted(displayed_fixtures, key=lambda fixture: fixture['fixture']['timestamp'])
@@ -357,9 +365,10 @@ async def fetch_and_display_fixtures(positions):
 
             print(f"Score display: {score_display}")
 
-            score_x = 240
+            score_x = 245
             score_width = display.measure_text(score_display, scale=2)
-            home_crest_x = score_x - score_width // 2 - 27
+            #home_crest_x = score_x - score_width // 2 - 27 # Disable dynamic positioning
+            home_crest_x = score_x - 48
             home_team_name_x = home_crest_x - display.measure_text(home_team[:17], scale=2) - 5
 
             # Display home team
@@ -378,8 +387,9 @@ async def fetch_and_display_fixtures(positions):
             display.text(score_display, score_x - score_width // 2, y_position + 5, scale=2)
 
             # Display away team
-            away_crest_x = score_x + score_width // 2 + 5
-            away_team_name_x = away_crest_x + 20 + 5
+            #away_crest_x = score_x + score_width // 2 + 5 # Disable dynamic positioning
+            away_crest_x = score_x + 27
+            away_team_name_x = away_crest_x + 20 + 10
 
             load_and_display_crest(away_team_id, away_crest_x, y_position + 2)
             display.set_pen(BLACK)
